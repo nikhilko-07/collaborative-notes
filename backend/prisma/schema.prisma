@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = "postgresql://neondb_owner:npg_O7tWYyxeQh3o@ep-bold-morning-aiiv5xmq-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+}
+
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  password    String
+  role        Role          @default(VIEWER)
+  name        String?
+  notes       Note[]
+  activities  Activity[]
+  collaborators Collaborator[]
+
+  @@map("users")
+}
+
+model Note {
+  id             String         @id @default(cuid())
+  title          String
+  content        String         @default("")
+  version        Int            @default(0)
+  ownerId        String
+  publicShareId  String?        @unique
+  lastModified   DateTime       @updatedAt
+  owner          User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  collaborators  Collaborator[]
+  activities     Activity[]
+
+  @@map("notes")
+}
+
+model Collaborator {
+  id     String           @id @default(cuid())
+  noteId String
+  userId String
+  role   CollaboratorRole @default(VIEWER)
+  note   Note             @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id])
+
+  @@unique([noteId, userId])
+  @@map("collaborators")
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  action    String
+  details   Json?
+  noteId    String?   // already optional, sahi hai
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  note      Note?    @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@map("activities")
+}
+
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum CollaboratorRole {
+  EDITOR
+  VIEWER
+}
